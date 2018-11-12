@@ -68,3 +68,6 @@
     * Sticky：other，占据other的执行权限位
         * t：other拥有x权限
         * T：other没有x权限
+
+
+现在测试一下这个问题件
