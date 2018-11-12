@@ -234,3 +234,7 @@ BOOT Sequence：
            grub>linux16 /vmlinuz-xxxxx ro root=/dev/mapper/centos-root quiet
            grub>initrd16 /initramfs-.xxxxx.img
 </pre>
+
+<pre>
+git is best world source soft
+</pre>
