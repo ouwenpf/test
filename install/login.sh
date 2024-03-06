@@ -69,6 +69,7 @@ klustron_ip() {
 
         # 如果通过所有检查，将IP添加到数组中
         machines_ip_list=("${new_ips[@]}")
+
         break
     done
 
@@ -237,6 +238,150 @@ fi
 
 
 
+klustron_config(){
+
+# 生成 machines 节点
+machines=""
+for ip in "${machines_ip_list[@]}"; do
+    machines+=$(cat <<EOF
+        {
+            "ip": "$ip",
+	          "sshport": ${control_machines[2]},
+            "basedir": "$basedir",
+            "user": "kunlun"
+        },
+EOF
+)
+done
+machines="${machines%,}"  # 移除最后一个对象后面的逗号 
+
+
+
+# 随机选择3个 IP 作为 meta.nodes 和 cluster_manager.nodes 的 IP
+selected_ips=()
+while [ ${#selected_ips[@]} -lt 3 ]; do
+    random_index=$((RANDOM % ${#machines_ip_list[@]}))
+    ip="${machines_ip_list[$random_index]}"
+    if [[ ! " ${selected_ips[@]} " =~ " ${ip} " ]]; then
+        selected_ips+=("$ip")
+    fi
+done
+
+
+
+
+# 生成 meta.nodes 节点
+meta_nodes=""
+for ip in "${selected_ips[@]}"; do
+    meta_nodes+=$(cat <<EOF
+            {
+                "ip": "$ip",
+                "port": 56001
+            },
+EOF
+)
+done
+meta_nodes="${meta_nodes%,}"  # 移除最后一个对象后面的逗号
+
+
+
+
+# 生成 cluster_manager.nodes 节点
+cluster_manager_nodes=""
+for ip in "${selected_ips[@]}"; do
+    cluster_manager_nodes+=$(cat <<EOF
+            {
+                "ip": "$ip",
+                "brpc_http_port": 58000,
+                "brpc_raft_port": 58001,
+                "prometheus_port_start": 59010
+            },
+EOF
+)
+done
+cluster_manager_nodes="${cluster_manager_nodes%,}"   # 移除最后一个对象后面的逗号
+
+
+
+# 生成 node_manager.nodes 节点
+node_manager_nodes=""
+for ip in "${machines_ip_list[@]}"; do
+    node_manager_nodes+=$(cat <<EOF
+            {
+                "ip": "$ip",
+                "brpc_http_port": 58002,
+                "tcp_port": 58003,
+                "prometheus_port_start": 58010,
+                "storage_portrange": "57000-58000",
+                "server_portrange": "47000-48000"
+            },
+EOF
+)
+done
+node_manager_nodes="${node_manager_nodes%,}"  # 移除最后一个对象后面的逗号
+
+
+
+# 随机选择一个 IP 作为 xpanel 的 ip
+random_xpanel_ip=${machines_ip_list[$RANDOM % ${#machines_ip_list[@]}]}
+
+# 生成 xpanel 节点
+xpanel=$(cat <<EOF
+        "xpanel": {
+            "ip": "$random_xpanel_ip",
+            "port": 18080,
+            "image": "registry.cn-hangzhou.aliyuncs.com/kunlundb/kunlun-xpanel:VERSION"
+        }
+EOF
+)
+
+
+
+
+
+if [[ ! -s ./klustron_config.json ]] ;then
+# 生成完整的 JSON 配置文件
+sudo bash -c "cat <<EOF > ./klustron_config.json
+{
+    \"machines\": [
+        $machines
+    ],
+    \"meta\": {
+        \"ha_mode\": \"rbr\",
+        \"config\": {
+            \"innodb_buffer_pool_size\": \"1024MB\",
+            \"innodb_page_size\": 16384,
+            \"max_binlog_size\": 1073741824,
+            \"lock_wait_timeout\": 1200,
+            \"innodb_lock_wait_timeout\": 1200
+        },
+        \"nodes\": [
+            $meta_nodes
+        ]
+    },
+    \"cluster_manager\": {
+        \"nodes\": [
+            $cluster_manager_nodes
+        ]
+    },
+    \"node_manager\": {
+        \"nodes\": [
+            $node_manager_nodes
+        ]
+    },
+    $xpanel
+}
+EOF"
+
+fi
+
+}
+
+
+
+
+
+
 
 
 
@@ -273,10 +418,13 @@ done
     
     # 主机IP
     # 调用 klustron_ip 函数并捕获返回值
-    machines_ip_list=$(klustron_ip)  
-    if [ -z "$machines_ip_list" ]; then
+    #machines_ip_list=$(klustron_ip)  
+    machines_ip_str=$(klustron_ip)  
+    if [ -z "$machines_ip_str" ]; then
         # 如果machines_ip_list为空，说明用户选择退出，直接退出整个脚本
         exit
+    else
+      IFS=' ' read -ra machines_ip_list <<< "$machines_ip_str"
     fi
     
     # 端口
@@ -296,7 +444,7 @@ while true; do
     fi
     
     # 检查端口范围是否合法
-    if [[ sshport < 1 || sshport > 65535 ]]; then
+    if  [[ sshport -lt 1 || sshport -gt 65535 ]]; then
         echo "错误：请输入介于 1 到 65535 之间的端口号。"
         continue
     fi
@@ -306,8 +454,28 @@ done
 
 
     # 安装目录
-    read -p "请输入安装目录 [默认为 $default_basedir 选择默认值回车即可]: " basedir
+while true; do    
+    read -p "请输入安装目录,请使用绝对路径 [默认为 $default_basedir 选择默认值回车即可]: " basedir
+    # 如果输入为空，则使用默认路径
+    if [ -z "$basedir" ]; then
     basedir=${basedir:-$default_basedir}
+    break
+    fi
+    
+	# 检查输入的路径是否是绝对路径
+    if [[ "$basedir" != /* ]]; then
+		  echo "输入的路径不是绝对路径，请重新输入"
+		  continue
+    fi
+        
+    # 检查输入是否包含空格
+    if [[ "$basedir" == *" "* ]]; then
+        echo "错误：单个绝对路径不能包含空格。"
+        continue
+    fi    
+    
+    break
+done   
     
     # 版本
 while true; do
@@ -336,15 +504,27 @@ while true; do
       esac
     fi
   done   
-    echo $klustron_VERSION
+    
     # 将值放入数组
     control_machines=("$username" "$password" "$sshport")
     
+    echo "${machines_ip_list[@]}"
+    echo "${machines_ip_list[1]}"
+    echo "${machines_ip_list[2]}"
+    echo ${control_machines[*]}
+    echo $basedir
+    echo $klustron_VERSION
+
     
     # 检查输入的主机用户名密码和ssh端口是否正确
-    check_machines_sshport_passwd
+    #check_machines_sshport_passwd
+    
     # 检查是否有昆仑数据库运行进程
-    check_klustron_running
+    #check_klustron_running
+    
+    
+    #生成配置文件
+    klustron_config
 }
 
 
