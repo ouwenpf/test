@@ -13,6 +13,7 @@ rnu=$((RANDOM % 21))
 if ! curl -s --head www.kunlunbase.com | head -n 1 | grep "200 OK" > /dev/null; then
     echo  -e "$COL_START$RED当前主机网络异常$COL_END"
     exit
+    
 fi
 
 
@@ -29,11 +30,11 @@ if [[ -f "/etc/os-release" ]]; then
     source /etc/os-release
     
     if [[ "$ID" == "centos" ]]; then
-        echo "CentOS"
+        echo "centos"
     elif [[ "$ID" == "ubuntu" ]]; then
-        echo "Ubuntu"
+        echo "ubuntu"
     elif [[ "$ID" == "kylin" ]]; then
-        echo "Kylin"
+        echo "kylin"
     else
         echo "Unknown system"
     fi
@@ -54,14 +55,14 @@ function system_type() {
 operating_system=$(detect_system_type)
 
 # 使用 if 语句判断函数返回值，并进行相应的操作
-if [[ "$operating_system" == "Ubuntu" ]]; then
-    echo "Detected Ubuntu system."
+if [[ "$operating_system" == "ubuntu" ]]; then
+    echo "Detected ubuntu system."
     # 在此处添加针对 Ubuntu 系统的操作
-elif [[ "$operating_system" == "CentOS" ]]; then
-    echo "Detected CentOS system."
+elif [[ "$operating_system" == "centos" ]]; then
+    echo "Detected centos system."
     # 在此处添加针对 CentOS 系统的操作
-elif [[ "$operating_system" == "Kylin" ]]; then
-    echo "Detected Kylin system."
+elif [[ "$operating_system" == "kylin" ]]; then
+    echo "Detected kylin system."
     # 在此处添加针对 Kylin 系统的操作
 else
     echo "Unknown system"
@@ -82,38 +83,41 @@ function control_env(){
 
 operating_system=$(detect_system_type)
 # 使用 if 语句判断函数返回值，并进行相应的操作
-if [[ "$operating_system" == "CentOS" ]]; then
+if [[ "$operating_system" == "centos" ]]; then
     echo  -e "$COL_START${YELLOW}正在检查系统环境.....$COL_END"
-    for i in figlet expect dos2unix jq nc; do
+    for i in  expect dos2unix jq nc; do
         if ! command -v "$i" &> /dev/null; then
             sudo yum install -y $i &>/dev/null
             if [[ $? -ne 0 ]]; then
                 echo  -e "$COL_START${RED}$i命令安装失败$COL_END"
+				exit
             fi
         fi
     done
-elif [[ "$operating_system" == "Ubuntu" ]]; then
+elif [[ "$operating_system" == "ubuntu" ]]; then
     echo  -e "$COL_START${YELLOW}正在检查系统环境.....$COL_END"
     for i in figlet expect dos2unix jq netcat; do
         if ! command -v "$i" &> /dev/null; then
             sudo apt-get install -y $i &>/dev/null
             if [[ $? -ne 0 ]]; then
                 echo  -e "$COL_START${RED}$i命令安装失败$COL_END"
+				exit
             fi
         fi
     done
-elif [[ "$operating_system" == "Kylin" ]]; then
+elif [[ "$operating_system" == "kylin" ]]; then
     echo  -e "$COL_START${YELLOW}正在检查系统环境.....$COL_END"
-    for i in figlet expect dos2unix jq nc; do
+    for i in  expect dos2unix jq nc; do
         if ! command -v "$i" &> /dev/null; then
             sudo yum install -y $i &>/dev/null
             if [[ $? -ne 0 ]]; then
                 echo  -e "$COL_START${RED}$i命令安装失败$COL_END"
+				exit
             fi
         fi
     done
 else
-    echo "Unknown system"
+    echo -e "$COL_START${RED}Unknown-system$COL_END"
     exit
 fi
 
@@ -122,6 +126,8 @@ fi
 
 
 }
+
+
 
 
 
@@ -136,86 +142,87 @@ privileges_line="${klustron_info[0]}   ALL=(ALL)       NOPASSWD: ALL"
 # 使用 if 语句判断函数返回值，并进行相应的操作
 
 
-if [[ "$operating_system" == "CentOS" ]]; then
+if [[ "$operating_system" == "centos" ]]; then
   if ! id ${klustron_info[0]} &>/dev/null; then 
     sudo useradd ${klustron_info[0]} &>/dev/null && \
     if [[ $? == 0 ]]; then
         if ! sudo egrep -q "^${klustron_info[0]}.*NOPASSWD: ALL$" /etc/sudoers; then
             sudo sed -i "/^root/a$privileges_line" /etc/sudoers 
             if [[ $? == 0 ]]; then
-                echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+                echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
             fi
         fi
     else
-        echo -e "$COL_START${RED}${klustron_info[0]} User creation failed$COL_END"
+        echo -e "$COL_START${RED}${klustron_info[0]} kunlun_user-Failed$COL_END"
         exit
     fi
   else
     if ! sudo egrep -q "^${klustron_info[0]}.*NOPASSWD: ALL$" /etc/sudoers; then
         sudo sed -i "/^root/a$privileges_line" /etc/sudoers  
         if [[ $? == 0 ]]; then
-            echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+            echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
         fi
     else
-        echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+        echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
     fi
   fi
 
 
-elif [[ "$operating_system" == "Ubuntu" ]]; then
+elif [[ "$operating_system" == "ubuntu" ]]; then
   if ! id ${klustron_info[0]} &>/dev/null; then 
     sudo useradd -r -m -s /bin/bash  $klustron_user  &>/dev/null   &&\
     if [[ $? == 0 ]]; then
         if ! sudo egrep -q "^${klustron_info[0]}.*NOPASSWD: ALL$" /etc/sudoers; then
             sudo sed -i "/^root/a$privileges_line" /etc/sudoers 
             if [[ $? == 0 ]]; then
-                echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+                echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
             fi
         fi
     else
-        echo -e "$COL_START${RED}${klustron_info[0]} User creation failed$COL_END"
+        echo -e "$COL_START${RED}${klustron_info[0]} kunlun_user-Failed$COL_END"
         exit
     fi
   else
     if ! sudo egrep -q "^${klustron_info[0]}.*NOPASSWD: ALL$" /etc/sudoers; then
         sudo sed -i "/^root/a$privileges_line" /etc/sudoers  
         if [[ $? == 0 ]]; then
-            echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+            echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
         fi
     else
-        echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+        echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
     fi
   fi
 
-elif [[ "$operating_system" == "Kylin" ]]; then
+elif [[ "$operating_system" == "kylin" ]]; then
   if ! id ${klustron_info[0]} &>/dev/null; then 
     sudo useradd ${klustron_info[0]} &>/dev/null && \
     if [[ $? == 0 ]]; then
         if ! sudo egrep -q "^${klustron_info[0]}.*NOPASSWD: ALL$" /etc/sudoers; then
             sudo sed -i "/^root/a$privileges_line" /etc/sudoers 
             if [[ $? == 0 ]]; then
-                echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+                echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
             fi
         fi
     else
-        echo -e "$COL_START${RED}${klustron_info[0]} User creation failed$COL_END"
+        echo -e "$COL_START${RED}${klustron_info[0]} kunlun_user-Failed$COL_END"
         exit
     fi
   else
     if ! sudo egrep -q "^${klustron_info[0]}.*NOPASSWD: ALL$" /etc/sudoers; then
         sudo sed -i "/^root/a$privileges_line" /etc/sudoers  
         if [[ $? == 0 ]]; then
-            echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+            echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
         fi
     else
-        echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END"
+        echo -e "$COL_START${GREEN}${klustron_info[0]} User created successfully$COL_END" &>/dev/null
     fi
   fi
 
 else
-    echo "Unknown system type."
+	echo -e "$COL_START${RED}Unknown-system$COL_END"
     exit
 fi
+
 
 
 
@@ -229,9 +236,9 @@ function kunlun_secret_key(){
 
 sudo -E su - ${klustron_info[0]} -c "
     if [[ ! -s \$HOME/.ssh/id_rsa || ! -s \$HOME/.ssh/id_rsa.pub ]]; then
-        rm -f \$HOME/.ssh/id_rsa \$HOME/.ssh/id_rsa.pub \$HOME/.ssh/authorized_keys &&
+        rm -f \$HOME/.ssh/id_rsa \$HOME/.ssh/id_rsa.pub  && \
         ssh-keygen -t rsa -N \"\" -f \$HOME/.ssh/id_rsa -q && \
-        cat \$HOME/.ssh/id_rsa.pub > \$HOME/.ssh/authorized_keys && \
+        cat \$HOME/.ssh/id_rsa.pub >> \$HOME/.ssh/authorized_keys && \
         chmod 600 \$HOME/.ssh/authorized_keys
     else
         if [[ ! -s \$HOME/.ssh/authorized_keys ]]; then
@@ -240,13 +247,6 @@ sudo -E su - ${klustron_info[0]} -c "
         fi
     fi
 
-    if ! crontab -l 2>/dev/null | grep -q \"^.*${klustron_info[1]}/kunlun-node-manager-${klustron_info[2]}/data.*backup\" ; then
-		  crontab -l 2>/dev/null > /tmp/crontab_tmp
-      echo \"0 2 * * * find ${klustron_info[1]}/kunlun-node-manager-${klustron_info[2]}/data/ -name 'backup*' -mtime +7 | xargs rm -fr  &>/dev/null\" >> /tmp/crontab_tmp
-		  crontab 2>/dev/null /tmp/crontab_tmp
-		
-    fi
-    
     
 "
 
@@ -290,27 +290,59 @@ fi
 }
 
 
+
+function kunlun_softwares(){
+
+
+sudo -E su - ${klustron_info[0]} -c "
+
+echo -e \"\e[33m正在下载昆仑安装程序......\e[0m\"  #&>/dev/null
+
+if [[ ! -d  /home/${klustron_info[0]}/softwares/cloudnative ]]; then
+    git clone https://gitee.com/zettadb/cloudnative.git /home/${klustron_info[0]}/softwares/cloudnative &>/dev/null
+    if [[ $? -eq 0 ]]; then
+        echo -e \"\e[32m昆仑安装程序下载成功\e[0m\"  #&>/dev/null
+    else 
+        echo -e \"\e[31m昆仑安装程序下载失败\e[0m\"
+        exit
+    fi
+else
+    echo -e \"\e[32m最新程序下载成功\e[0m\"  #&>/dev/null
+fi
+"
+
+}
+
+
+
+
+
+
+
 #函数分发脚本,为每个机器安装klustron数据库必要环境.
 
 function host_initialize(){
 
-if [[ -s initialize.sh ]];then
+
+if sudo test -s /home/${klustron_info[0]}/softwares/cloudnative/cluster/install_scripts/initialize.sh ;then
+  sudo cp -rp /home/${klustron_info[0]}/softwares/cloudnative/cluster/install_scripts/initialize.sh  /tmp/  && \
+  sudo chown ${control_machines[0]}:${control_machines[0]}  /tmp/initialize.sh
 
   for i in "${machines_ip_list[@]}"
   do
     # 复制 initialize.sh到远程主机
 output=$(expect <<EOF
   set timeout 3
-  spawn sudo scp -rp -P${control_machines[2]} initialize.sh ${control_machines[0]}@$i:/tmp/
+  spawn  scp -rp -P${control_machines[2]} /tmp/initialize.sh ${control_machines[0]}@$i:/tmp/
 
         expect {
                 "yes/no" { send "yes\n"; exp_continue }
                 "password" {
                          send -- {${control_machines[1]}}
                          send "\n"
-
+				
                 }
-
+				eof { exit }
 
         }
 
@@ -337,7 +369,7 @@ EOF
   if [[ $count_host_initialize -ge 1 ]];then 
     exit
   else
-    echo -e "$COL_START${GREEN}第三步:文件拷贝成功$COL_END"
+    echo -e "$COL_START${GREEN}第三步:文件拷贝成功$COL_END" &>/dev/null
   fi
 
   
@@ -358,24 +390,39 @@ fi
 function execute_initialize(){
 
 echo  -e "$COL_START${YELLOW}正在初始化机器需要一点时间,请耐心等待,请勿中断.......$COL_END" 
+echo  -e "$COL_START${RED}=================================$COL_END"
 
 for i in "${machines_ip_list[@]}"
 do
     # 执行initialize.sh脚本
-    expect <<EOF &>/dev/null
+   output=$(expect <<EOF #&>/dev/null
         set timeout 300
-        spawn sudo ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo bash /tmp/initialize.sh ${klustron_info[@]}"
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo bash /tmp/initialize.sh ${klustron_info[@]} && sudo rm -f /tmp/initialize.sh"
         expect {
             "yes/no" { send "yes\n"; exp_continue }
             "password" {
                 send -- {${control_machines[1]}}
                 send "\n"
+            
             }
+            eof { exit }
         }
         expect eof
 EOF
+)
+
+
+ result_ip=$(echo "$output"|dos2unix|awk '{print $4}'|awk -F '@'  '{print $2}')
+ result_error=$(echo "$output"|dos2unix|tr "'"  " "|xargs -n 1|egrep -vw "${control_machines[0]}@$i|s|password\:|initialize.sh"|awk 'NR>12')
+ result_array=("$result_ip" "$result_error")
+
+ for k in "${result_array[@]}"; do
+    echo "$k"
+ done
+echo  -e "$COL_START${RED}=================================$COL_END"
 
 done
+
 
 
 
@@ -390,19 +437,22 @@ done
 
 function configure_Key(){
 
+sudo cp -ra /home/${klustron_info[0]}/.ssh /tmp/ && \
+sudo chown -R ${control_machines[0]}:${control_machines[0]} /tmp/.ssh
 
 for i in "${machines_ip_list[@]}"
 do
     # 复制 .ssh 文件夹到远程主机
     expect <<EOF &>/dev/null
-        set timeout 300
-        spawn sudo scp -rp -P${control_machines[2]} /home/${klustron_info[0]}/.ssh ${control_machines[0]}@$i:/tmp/
+        set timeout 3
+        spawn  scp -rp -P${control_machines[2]} /tmp/.ssh ${control_machines[0]}@$i:/tmp/
         expect {
             "yes/no" { send "yes\n"; exp_continue }
             "password" {
                 send -- {${control_machines[1]}}
                 send "\n"
             }
+            eof { exit }
         }
         expect eof
 EOF
@@ -411,14 +461,15 @@ EOF
 
     # 复制 .ssh 文件夹到对应的文件夹
     expect <<EOF &>/dev/null
-        set timeout 300
-        spawn sudo ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo cp -rp /tmp/.ssh /home/${klustron_info[0]}/ && sudo rm -fr /tmp/.ssh"
+        set timeout 3
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo cp -ra /tmp/.ssh /home/${klustron_info[0]}"
         expect {
             "yes/no" { send "yes\n"; exp_continue }
             "password" {
                 send -- {${control_machines[1]}}
                 send "\n"
             }
+            eof { exit }
         }
         expect eof
 EOF
@@ -428,14 +479,15 @@ EOF
 
     # 更改 .ssh 文件夹的权限
     expect <<EOF &>/dev/null
-        set timeout 300
-        spawn sudo ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo chown -R ${klustron_info[0]}:${klustron_info[0]} /home/${klustron_info[0]}/.ssh"
+        set timeout 3
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo chown -R ${klustron_info[0]}:${klustron_info[0]} /home/${klustron_info[0]}/.ssh"
         expect {
             "yes/no" { send "yes\n"; exp_continue }
             "password" {
                 send -- {${control_machines[1]}}
                 send "\n"
             }
+            eof { exit }
         }
         expect eof
 EOF
@@ -454,19 +506,106 @@ EOF
 done
 
 if [[ $count_key_distribution_file -ge 1 ]] ;then
+	echo -e "$COL_START${RED}昆仑用户配置免密失败$COL_END" 
 	exit
 else
-  echo -e "$COL_START${GREEN}第五步:昆仑用户配置免密成功$COL_END"  
+  echo -e "$COL_START${GREEN}第五步:昆仑用户配置免密成功$COL_END"  &>/dev/null
+    #删除/tmp/.ssh目录
+    for i in "${machines_ip_list[@]}"
+    do
+      expect <<EOF &>/dev/null
+        set timeout 3
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo test -d /tmp/.ssh &&  sudo rm -fr  /tmp/.ssh"
+        expect {
+            "yes/no" { send "yes\n"; exp_continue }
+            "password" {
+                send -- {${control_machines[1]}}
+                send "\n"
+            }
+            eof { exit }
+        }
+        expect eof
+EOF
+   done 
 fi
 
 
 
+}
 
 
 
+
+
+function test_1(){
+
+sudo -E su - ${klustron_info[0]} -c  "
+cd \$HOME/softwares/cloudnative/cluster/clustermgr/
+
+urls=(
+    \"http://zettatech.tpddns.cn:14000/thirdparty/efk/elasticsearch-7.10.1.tar.gz\"
+    \"http://zettatech.tpddns.cn:14000/thirdparty/efk/filebeat-7.10.1-linux-x86_64.tar.gz\"
+    \"http://zettatech.tpddns.cn:14000/thirdparty/efk/kibana-7.10.1.tar.gz\"
+    \"http://zettatech.tpddns.cn:14000/thirdparty/hadoop-3.3.1.tar.gz\"
+    \"http://zettatech.tpddns.cn:14000/thirdparty/jdk-8u131-linux-x64.tar.gz\"
+    \"http://zettatech.tpddns.cn:14000/thirdparty/mysql-connector-python-2.1.3.tar.gz\"
+    \"http://zettatech.tpddns.cn:14000/thirdparty/prometheus.tgz\"
+    \"http://zettatech.tpddns.cn:14000/thirdparty/haproxy-2.5.0-bin.tar.gz\"
+)
+
+for url in \"\${urls[@]}\"; do
+    filename=\$(basename \"\$url\")
+    if  [[ -f \$filename ]];then
+        if ! curl -s \"\$url\"|diff - \"\$filename\";then
+            rm -f \"\$filename\"  && \
+            wget  \"\$url\"
+        fi
+        else
+            wget  \"\$url\"
+        fi
+done
+"
+
+}
+
+
+function test_2(){
+
+sudo -E su - ${klustron_info[0]} -c  "
+
+cd \$HOME/softwares/cloudnative/cluster/clustermgr/
+urls=(
+    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/docker-images/kunlun-xpanel-${klustron_info[2]}.tar.gz\"
+    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-cdc-${klustron_info[2]}.tgz\"
+    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-proxysql-${klustron_info[2]}.tgz\"
+    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-cluster-manager-${klustron_info[2]}.tgz\"
+    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-node-manager-${klustron_info[2]}.tgz\"
+    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-server-${klustron_info[2]}.tgz\"
+    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-storage-${klustron_info[2]}.tgz\"
+)
+
+for url in \"\${urls[@]}\"; do
+    filename=\$(basename \"\$url\")
+    if  [[ -f \$filename ]];then
+        if ! curl -s \"\$url\"|diff - \"\$filename\";then
+            rm -f \"\$filename\"  && \
+            wget  \"\$url\"
+        fi
+        else
+            wget  \"\$url\"
+        fi
+done
+"
 
 
 }
+
+
+
+
+
+
+
 
 
 
@@ -553,6 +692,150 @@ function klustron_ip() {
     # 将IP列表作为返回值返回
     echo "${machines_ip_list[@]}"
 }
+
+
+
+
+#函数检查机器的架构是否一致
+function check_arch(){
+
+declare -A server_arch
+for i in "${machines_ip_list[@]}"
+do
+
+   output=$(expect <<EOF #&>/dev/null
+        set timeout 3
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo uname -m"
+        expect {
+            "yes/no" { send "yes\n"; exp_continue }
+            "password" {
+                send -- {${control_machines[1]}}
+                send "\n"
+            }
+            eof { exit }
+        }
+        expect eof
+EOF
+)
+
+
+server_arch["$i"]=$(echo "$output"|dos2unix|sed '1d'|egrep -v 'password')
+first_arch=$(sudo uname -m|dos2unix)
+
+if [[ "${server_arch["$i"]}" != "$first_arch" ]]; then
+   let  count_arch++
+fi
+
+
+done
+
+
+#判断变量是否大于等于1,成立表示有机器架构不一样,脚本退出
+if [[ $count_arch -ge 1 ]];then
+  echo -e "$COL_START${RED}主机架构不一致$COL_END"
+  exit
+fi
+
+
+}
+
+
+
+#函数检查机器的OS是否一致
+function check_os(){
+
+declare -A server_os
+
+for i in "${machines_ip_list[@]}"
+do
+
+   output=$(expect <<EOF #&>/dev/null
+        set timeout 3
+        spawn  ssh   -p${control_machines[2]} ${control_machines[0]}@$i 2>/dev/null  "cat /etc/os-release |egrep  -iw 'ID'"
+        expect {
+            "yes/no" { send "yes\n"; exp_continue }
+            "password" {
+                send -- {${control_machines[1]}}
+                send "\n"
+            }
+            eof { exit }
+        }
+        expect eof
+EOF
+)
+
+
+
+server_os["$i"]=$(echo "$output"|dos2unix|sed '1d'|egrep -v 'password'|egrep  -iw 'ID')
+
+first_os=${server_os[${machines_ip_list[0]}]}
+
+
+if [[ "${server_os["$i"]}" != "$first_os" ]]; then
+   let  count_os++
+fi
+
+
+done
+
+
+#判断变量是否大于等于1,成立表示有机器系统不一致,脚本退出
+if [[ $count_os -ge 1 ]];then
+  echo -e "$COL_START${RED}主机系统不一致$COL_END"
+  exit
+fi
+
+
+
+}
+
+
+
+#函数检查机器的时区是否一致
+
+function check_zone(){
+
+declare -A timezone
+for i in "${machines_ip_list[@]}"
+do
+    # 执行initialize.sh脚本
+   output=$(expect <<EOF #&>/dev/null
+        set timeout 3
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo timedatectl | grep 'Time zone' |awk -F ':' '{print $2}'|awk '{print $1}'"
+        expect {
+            "yes/no" { send "yes\n"; exp_continue }
+            "password" {
+                send -- {${control_machines[1]}}
+                send "\n"
+            }
+            eof { exit }
+        }
+        expect eof
+EOF
+)
+
+
+timezone["$i"]=$(echo "$output"|dos2unix|egrep -v 'password'|awk -F 'zone:' '{print $2}'|awk -F '[ ]+' '{print $2}')
+
+first_timezone=${timezone[${machines_ip_list[0]}]}
+
+if [[ "${timezone["$i"]}" != "$first_timezone" ]]; then
+   let  count_timezone++
+fi
+
+
+done
+
+
+#判断变量是否大于等于1,成立表示有机器ssh端口不通,脚本退出
+if [[ $count_timezone -ge 1 ]];then
+  echo -e "$COL_START${RED}主机时区不一致$COL_END" 
+  exit
+fi
+
+}
+
+
 
 
 
@@ -674,7 +957,7 @@ output=$(expect <<EOF
 			 send "\n"
 		
 		}
-		
+		eof { exit }
 	
 	}
  
@@ -812,7 +1095,7 @@ xpanel=$(cat <<EOF
             "upgrade_all": false, 
             "ip": "$random_xpanel_ip",
             "port": 18080,
-            "image": "registry.cn-hangzhou.aliyuncs.com/kunlundb/kunlun-xpanel:VERSION"
+            "imageType": "file"
         }
 EOF
 )
@@ -821,9 +1104,10 @@ EOF
 
 
 
-if [[ ! -s ./klustron_config.json ]] ;then
+if sudo test ! -s /home/${klustron_info[0]}/softwares/cloudnative/cluster/klustron_config.json ;then
 # 生成完整的 JSON 配置文件
-sudo bash -c "cat <<EOF > ./klustron_config.json
+#sudo bash -c "cat <<EOF > /home/${klustron_info[0]}/softwares/cloudnative/cluster/klustron_config.json
+sudo bash -c "cat <<EOF > /home/${klustron_info[0]}/softwares/cloudnative/cluster/klustron_config.json
 {
     \"machines\": [
     $machines
@@ -857,7 +1141,10 @@ sudo bash -c "cat <<EOF > ./klustron_config.json
     },
     $xpanel
 }
-EOF"
+EOF"  && \
+
+sudo chown ${klustron_info[0]}:${klustron_info[0]} /home/${klustron_info[0]}/softwares/cloudnative/cluster/klustron_config.json
+
 
 fi
 
@@ -881,10 +1168,10 @@ base_env
 # 判断系统类型函数
 #system_type
 
-# 控制机器环境函数
-control_env
 
 
+
+# 客户交互式输入开始
     #default_username=$(whoami)
     username=$(whoami)
     default_sshport=22
@@ -913,11 +1200,14 @@ done
 
 !
 
+
+
     # 密码
     #echo -en "${COL_START}${YELLOW}${COL_END}"
-    read -t 300 -s -r -p "请输入root用户密码: " password
+    read -t 300 -s -r -p "请输入$username用户密码: " password
     echo
-    
+
+
     # 主机IP
     # 调用 klustron_ip 函数并捕获返回值
     #machines_ip_list=$(klustron_ip)  
@@ -928,6 +1218,9 @@ done
     else
       IFS=' ' read -ra machines_ip_list <<< "$machines_ip_str"
     fi
+    
+
+    
     
     # 端口
 while true; do
@@ -963,6 +1256,8 @@ while true; do
     #echo -en "${COL_START}${YELLOW}请输入安装目录,请使用绝对路径 [默认为 $default_basedir 选择默认值回车即可]: ${COL_END}"
     #read -p " " basedir
     read -p "请输入安装目录,请使用绝对路径 [默认为 $default_basedir 选择默认值回车即可]: " basedir
+    #只保留最前面一个斜杆和去掉最后面所有斜杆
+    basedir=$(echo "$basedir" | sed 's:^/\{2,\}:/:; s:/\+$::')
     # 如果输入为空，则使用默认路径
     if [ -z "$basedir" ]; then
     basedir=${basedir:-$default_basedir}
@@ -1028,7 +1323,8 @@ while true; do
     # 将值放入数组
     control_machines=("$username" "$password" "$sshport")
     klustron_info=("kunlun" "$basedir" "$klustron_VERSION")
-    
+ 
+<<! 
     echo "${machines_ip_list[0]}"
     echo "${machines_ip_list[1]}"
     echo "${machines_ip_list[2]}"
@@ -1038,22 +1334,37 @@ while true; do
     echo ${klustron_info[0]}
     echo ${klustron_info[1]}
     echo ${klustron_info[2]}
- 
+!
+# 用户交互结束 
 
-    
+    # 控制机器环境函数
+	control_env
+
     # 检查输入的主机用户名密码和ssh端口是否正确
-    #check_machines_sshport_passwd
+    check_machines_sshport_passwd
+
+    # 检查输入的主机架构是否一致
+    check_arch
     
+    # 检查输入的主机系统是否一致
+    check_os
+    
+	# 检查输入的主机时区是否一致
+	check_zone
+	 
     # 检查是否有昆仑数据库运行进程
-    #check_klustron_running
+    check_klustron_running
     
-    
-    #生成配置文件
-    klustron_config
-    
+	
     # 控制机创建昆仑用户函数
     control_kunlun
+	
+	# 下载昆仑数据库程序
+    kunlun_softwares
     
+	#生成配置文件
+    klustron_config
+	
     # 创建昆仑用户秘钥
     kunlun_secret_key
     
@@ -1064,6 +1375,9 @@ while true; do
     
     # 配置kunlun用户免密
     configure_Key
+    
+    test_1
+    test_2
 }
 
 
