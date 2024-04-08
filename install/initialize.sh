@@ -311,7 +311,7 @@ if [[ $? == 0 ]];then
   echo  -e "$COL_START${GREEN}The firewall has been closed successful$COL_END"  &>/dev/null
 	
 else
-  echo  -e "$COL_START${GREEN}Firewall_close-Failed$COL_END"
+  echo  -e "$COL_START${RED}Firewall_close-Failed$COL_END"
 
 fi 
 

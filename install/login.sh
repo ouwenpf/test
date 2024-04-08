@@ -300,14 +300,14 @@ echo -e \"\e[33m正在下载昆仑安装程序......\e[0m\"  #&>/dev/null
 
 if [[ ! -d  /home/${klustron_info[0]}/softwares/cloudnative ]]; then
     git clone https://gitee.com/zettadb/cloudnative.git /home/${klustron_info[0]}/softwares/cloudnative &>/dev/null
-    if [[ $? -eq 0 ]]; then
-        echo -e \"\e[32m昆仑安装程序下载成功\e[0m\"  #&>/dev/null
+    if [[ \$? -eq 0 ]]; then 
+        echo -e \"$COL_START${GREEN}昆仑安装程序下载成功$COL_END\"
     else 
-        echo -e \"\e[31m昆仑安装程序下载失败\e[0m\"
+        echo -e \"$COL_START${RED}昆仑安装程序下载失败$COL_END\"
         exit
     fi
 else
-    echo -e \"\e[32m最新程序下载成功\e[0m\"  #&>/dev/null
+    echo -e \"$COL_START${GREEN}昆仑安装程序下载成功$COL_END\"
 fi
 "
 
@@ -537,64 +537,220 @@ fi
 
 
 
-function test_1(){
+function kunlun_thirdparty(){
 
 sudo -E su - ${klustron_info[0]} -c  "
 cd \$HOME/softwares/cloudnative/cluster/clustermgr/
 
-urls=(
-    \"http://zettatech.tpddns.cn:14000/thirdparty/efk/elasticsearch-7.10.1.tar.gz\"
-    \"http://zettatech.tpddns.cn:14000/thirdparty/efk/filebeat-7.10.1-linux-x86_64.tar.gz\"
-    \"http://zettatech.tpddns.cn:14000/thirdparty/efk/kibana-7.10.1.tar.gz\"
-    \"http://zettatech.tpddns.cn:14000/thirdparty/hadoop-3.3.1.tar.gz\"
-    \"http://zettatech.tpddns.cn:14000/thirdparty/jdk-8u131-linux-x64.tar.gz\"
-    \"http://zettatech.tpddns.cn:14000/thirdparty/mysql-connector-python-2.1.3.tar.gz\"
-    \"http://zettatech.tpddns.cn:14000/thirdparty/prometheus.tgz\"
-    \"http://zettatech.tpddns.cn:14000/thirdparty/haproxy-2.5.0-bin.tar.gz\"
-)
+lan_net='http://192.168.0.104:14000'
+wal_net='http://zettatech.tpddns.cn:14000'
+
+if nc -z 192.168.0.104 14000; then
+
+    urls=(
+        \"\$lan_net/thirdparty/efk/elasticsearch-7.10.1.tar.gz\"
+        \"\$lan_net/thirdparty/efk/filebeat-7.10.1-linux-x86_64.tar.gz\"
+        \"\$lan_net/thirdparty/efk/kibana-7.10.1.tar.gz\"
+        \"\$lan_net/thirdparty/hadoop-3.3.1.tar.gz\"
+        \"\$lan_net/thirdparty/jdk-8u131-linux-x64.tar.gz\"
+        \"\$lan_net/thirdparty/mysql-connector-python-2.1.3.tar.gz\"
+        \"\$lan_net/thirdparty/prometheus.tgz\"
+        \"\$lan_net/thirdparty/haproxy-2.5.0-bin.tar.gz\"
+    )
+
+else
+
+    urls=(
+        \"\$wal_net/thirdparty/efk/elasticsearch-7.10.1.tar.gz\"
+        \"\$wal_net/thirdparty/efk/filebeat-7.10.1-linux-x86_64.tar.gz\"
+        \"\$wal_net/thirdparty/efk/kibana-7.10.1.tar.gz\"
+        \"\$wal_net/thirdparty/hadoop-3.3.1.tar.gz\"
+        \"\$wal_net/thirdparty/jdk-8u131-linux-x64.tar.gz\"
+        \"\$wal_net/thirdparty/mysql-connector-python-2.1.3.tar.gz\"
+        \"\$wal_net/thirdparty/prometheus.tgz\"
+        \"\$wal_net/thirdparty/haproxy-2.5.0-bin.tar.gz\"
+    )
+
+fi
+
+echo -e \"$COL_START${YELLOW}正在下载Klustron分布式数据库相关组件,请勿中断........$COL_END\" 
 
 for url in \"\${urls[@]}\"; do
     filename=\$(basename \"\$url\")
-    if  [[ -f \$filename ]];then
-        if ! curl -s \"\$url\"|diff - \"\$filename\";then
-            rm -f \"\$filename\"  && \
-            wget  \"\$url\"
-        fi
+    if  [[ ! -f \$filename ]];then
+      if wget -q  --spider \"\$url\"; then
+            wget  \"\$url\"   &>/dev/null
+            if [[ \$? -ne 0 ]]; then
+                echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+                let download_thirdparty++
+
+            fi
         else
-            wget  \"\$url\"
-        fi
+            echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+            let download_thirdparty++
+
+      fi
+    fi
 done
+
+
+
+
+<<!
+for url in \"\${urls[@]}\"; do
+    filename=\$(basename \"\$url\")
+    if  [[ ! -f \$filename ]];then
+      if wget -q  --spider \"\$url\"; then
+            wget  \"\$url\"   &>/dev/null
+            if [[ \$? -ne 0 ]]; then
+                echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+                let download_thirdparty++
+
+            fi
+        else
+            echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+            let download_thirdparty++
+
+      fi
+	 
+	else
+		remote_md5=\$(curl -s \"$url\" | md5sum | awk '{print \$1}')
+        md5_local=\$(md5sum \"\$filename\" | awk '{print \$1}')
+		if [ \"\$md5_remote\" != \"\$md5_local\" ]; then
+            if wget -q  --spider \"\$url\"; then
+				rm -f \"\$filename\"  
+				wget  \"\$url\"   &>/dev/null
+			    if [[ \$? -ne 0 ]]; then
+					echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+					let download_thirdparty++
+				fi
+			else
+				echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+				let download_thirdparty++
+			
+            fi
+
+		fi
+    fi
+done
+!
+
+
+if [[ \$download_thirdparty -ge 1 ]];then
+        exit
+else
+	echo -e \"$COL_START${GREEN}下载Klustron分布式数据库组件成功$COL_END\"        
+fi
 "
 
 }
 
 
-function test_2(){
+function kunlun_package(){
 
 sudo -E su - ${klustron_info[0]} -c  "
 
 cd \$HOME/softwares/cloudnative/cluster/clustermgr/
+
+lan_net='http://192.168.0.104:14000'
+wal_net='http://zettatech.tpddns.cn:14000'
+#date_time='archive/2024-04-08/'
+
+if nc -z 192.168.0.104 14000; then
 urls=(
-    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/docker-images/kunlun-xpanel-${klustron_info[2]}.tar.gz\"
-    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-cdc-${klustron_info[2]}.tgz\"
-    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-proxysql-${klustron_info[2]}.tgz\"
-    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-cluster-manager-${klustron_info[2]}.tgz\"
-    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-node-manager-${klustron_info[2]}.tgz\"
-    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-server-${klustron_info[2]}.tgz\"
-    \"http://zettatech.tpddns.cn:14000/dailybuilds_x86_64/enterprise/kunlun-storage-${klustron_info[2]}.tgz\"
+\"\$lan_net/dailybuilds_x86_64/docker-images/${date_time}kunlun-xpanel-${klustron_info[2]}.tar.gz\"
+\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-cdc-${klustron_info[2]}.tgz\"
+\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-proxysql-${klustron_info[2]}.tgz\"
+\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-cluster-manager-${klustron_info[2]}.tgz\"
+\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-node-manager-${klustron_info[2]}.tgz\"
+\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-server-${klustron_info[2]}.tgz\"
+\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-storage-${klustron_info[2]}.tgz\"
 )
+
+else
+
+urls=(
+\"\$wal_net/dailybuilds_x86_64/docker-images/${date_time}kunlun-xpanel-${klustron_info[2]}.tar.gz\"
+\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-cdc-${klustron_info[2]}.tgz\"
+\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-proxysql-${klustron_info[2]}.tgz\"
+\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-cluster-manager-${klustron_info[2]}.tgz\"
+\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-node-manager-${klustron_info[2]}.tgz\"
+\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-server-${klustron_info[2]}.tgz\"
+\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-storage-${klustron_info[2]}.tgz\"
+)
+
+
+fi
+
+
+
+echo -e \"$COL_START${YELLOW}正在下载Klustron分布式数据库安装包,请勿中断........$COL_END\" 
 
 for url in \"\${urls[@]}\"; do
     filename=\$(basename \"\$url\")
-    if  [[ -f \$filename ]];then
-        if ! curl -s \"\$url\"|diff - \"\$filename\";then
-            rm -f \"\$filename\"  && \
-            wget  \"\$url\"
-        fi
+    if  [[ ! -f \$filename ]];then
+      if wget -q  --spider \"\$url\"; then
+            wget  \"\$url\"   &>/dev/null
+            if [[ \$? -ne 0 ]]; then
+                echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+                let download_package++
+
+            fi
         else
-            wget  \"\$url\"
-        fi
+            echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+            let download_package++
+
+      fi
+	 
+	else
+		remote_md5=\$(curl -s \"$url\" | md5sum | awk '{print \$1}')
+        md5_local=\$(md5sum \"\$filename\" | awk '{print \$1}')
+		if [ \"\$md5_remote\" != \"\$md5_local\" ]; then
+            if wget -q  --spider \"\$url\"; then
+				rm -f \"\$filename\"  
+				wget  \"\$url\"   &>/dev/null
+			    if [[ \$? -ne 0 ]]; then
+					echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+					let download_package++
+				fi
+			else
+				echo -e \"$COL_START${RED}下载\$filename失败$COL_END\"
+				let download_package++
+			
+            fi
+
+		fi
+    fi
 done
+
+
+
+if [[ -s kunlun-storage-${klustron_VERSION}.tgz ]]; then
+    tar xf kunlun-storage-${klustron_VERSION}.tgz && \
+    cd kunlun-storage-${klustron_VERSION}/dba_tools && \
+    sed -ri 's#^innodb_page_size=.*\$#innodb_page_size=16384#g' template-rbr.cnf && \
+    cd ../.. && \
+    rm -f kunlun-storage-${klustron_VERSION}.tgz && \
+    tar -czf kunlun-storage-${klustron_VERSION}.tgz kunlun-storage-${klustron_VERSION} && \
+    rm -fr kunlun-storage-${klustron_VERSION}
+    if [[ \$? -ne 0 ]]; then
+        echo -e \"$COL_START$RED请检查文件kunlun-storage-${klustron_VERSION}.tgz重新打包失败$COL_END\"
+        exit
+    fi
+else
+	echo -e \"$COL_START$RED文件kunlun-storage-${klustron_VERSION}.tgz不存在$COL_END\"
+	exit
+fi
+
+
+
+
+if [[ \$download_package -ge 1 ]];then
+        exit
+else
+	echo -e \"$COL_START${GREEN}下载Klustron分布式数据库安装包成功$COL_END\"
+	
+fi
 "
 
 
@@ -604,6 +760,33 @@ done
 
 
 
+function install_script(){
+
+sudo -E su - ${klustron_info[0]} -c  "
+
+cd \$HOME/softwares/cloudnative/cluster/
+
+for i in install clean start stop
+do
+
+if  command -v python2 &> /dev/null; then
+        python2 setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i  &> /dev/null
+        if [[ \$? -ne 0 ]];then
+                echo -e \"$COL_START${RED}执行python2 setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i有误$COL_END\"
+
+        fi
+
+else
+        echo -e \"$COL_START${RED}python命令不存在,请安装python$COL_END\"
+        exit
+fi
+
+
+
+done
+
+"
+}
 
 
 
@@ -1376,8 +1559,10 @@ while true; do
     # 配置kunlun用户免密
     configure_Key
     
-    test_1
-    test_2
+    # 下载kunlun相关组件和程序安装包
+    kunlun_thirdparty
+    kunlun_package
+    install_script
 }
 
 
