@@ -35,6 +35,8 @@ if [[ -f "/etc/os-release" ]]; then
         echo "ubuntu"
     elif [[ "$ID" == "kylin" ]]; then
         echo "kylin"
+	elif [[ "$ID" == "bclinux" ]]; then
+        echo "bclinux"
     else
         echo "Unknown system"
     fi
@@ -64,6 +66,9 @@ elif [[ "$operating_system" == "centos" ]]; then
 elif [[ "$operating_system" == "kylin" ]]; then
     echo "Detected kylin system."
     # 在此处添加针对 Kylin 系统的操作
+elif [[ "$operating_system" == "bclinux" ]]; then
+    echo "Detected kylin system."
+    # 在此处添加针对 bclinux 系统的操作
 else
     echo "Unknown system"
     exit
@@ -83,9 +88,9 @@ function control_env(){
 
 operating_system=$(detect_system_type)
 # 使用 if 语句判断函数返回值，并进行相应的操作
-if [[ "$operating_system" == "centos" ]]; then
+if [[ "$operating_system" == "centos" || "$operating_system" == "bclinux" ]]; then
     echo  -e "$COL_START${YELLOW}正在检查系统环境.....$COL_END"
-    for i in  expect dos2unix jq nc; do
+    for i in  expect dos2unix jq nc git; do
         if ! command -v "$i" &> /dev/null; then
             sudo yum install -y $i &>/dev/null
             if [[ $? -ne 0 ]]; then
@@ -142,7 +147,7 @@ privileges_line="${klustron_info[0]}   ALL=(ALL)       NOPASSWD: ALL"
 # 使用 if 语句判断函数返回值，并进行相应的操作
 
 
-if [[ "$operating_system" == "centos" ]]; then
+if [[ "$operating_system" == "centos" || "$operating_system" == "bclinux" ]]; then
   if ! id ${klustron_info[0]} &>/dev/null; then 
     sudo useradd ${klustron_info[0]} &>/dev/null && \
     if [[ $? == 0 ]]; then
@@ -170,7 +175,7 @@ if [[ "$operating_system" == "centos" ]]; then
 
 elif [[ "$operating_system" == "ubuntu" ]]; then
   if ! id ${klustron_info[0]} &>/dev/null; then 
-    sudo useradd -r -m -s /bin/bash  $klustron_user  &>/dev/null   &&\
+    sudo useradd -r -m -s /bin/bash  ${klustron_info[0]}  &>/dev/null   &&\
     if [[ $? == 0 ]]; then
         if ! sudo egrep -q "^${klustron_info[0]}.*NOPASSWD: ALL$" /etc/sudoers; then
             sudo sed -i "/^root/a$privileges_line" /etc/sudoers 
@@ -228,6 +233,27 @@ fi
 
 
 }
+
+
+
+# 获取昆仑用户家目录路径,家目录非/home/user
+function home_user_env(){
+
+function home_user(){
+    
+    kunlun_home_dir=$(sudo -E su - ${klustron_info[0]} -c "eval echo ~$SUDO_USER")
+    # 将 kunlun_home_dir 变量的值返回到脚本中
+    echo $kunlun_home_dir
+}
+
+kunlun_home=$(home_user)
+
+}
+
+
+
+
+
 
 
 
@@ -298,8 +324,8 @@ sudo -E su - ${klustron_info[0]} -c "
 
 echo -e \"\e[33m正在下载昆仑安装程序......\e[0m\"  #&>/dev/null
 
-if [[ ! -d  /home/${klustron_info[0]}/softwares/cloudnative ]]; then
-    git clone https://gitee.com/zettadb/cloudnative.git /home/${klustron_info[0]}/softwares/cloudnative &>/dev/null
+if [[ ! -d  \$HOME/softwares/cloudnative ]]; then
+    git clone https://gitee.com/zettadb/cloudnative.git \$HOME/softwares/cloudnative &>/dev/null
     if [[ \$? -eq 0 ]]; then 
         echo -e \"$COL_START${GREEN}昆仑安装程序下载成功$COL_END\"
     else 
@@ -324,8 +350,8 @@ fi
 function host_initialize(){
 
 
-if sudo test -s /home/${klustron_info[0]}/softwares/cloudnative/cluster/install_scripts/initialize.sh ;then
-  sudo cp -rp /home/${klustron_info[0]}/softwares/cloudnative/cluster/install_scripts/initialize.sh  /tmp/  && \
+if sudo test -s $kunlun_home/softwares/cloudnative/cluster/install_scripts/initialize.sh ;then
+  sudo cp -ra $kunlun_home/softwares/cloudnative/cluster/install_scripts/initialize.sh  /tmp/  && \
   sudo chown ${control_machines[0]}:${control_machines[0]}  /tmp/initialize.sh
 
   for i in "${machines_ip_list[@]}"
@@ -412,12 +438,12 @@ EOF
 )
 
 
- result_ip=$(echo "$output"|dos2unix|awk '{print $4}'|awk -F '@'  '{print $2}')
- result_error=$(echo "$output"|dos2unix|tr "'"  " "|xargs -n 1|egrep -vw "${control_machines[0]}@$i|s|password\:|initialize.sh"|awk 'NR>12')
+ result_ip=$(echo "$output"|sed 's/[^[:print:]\t]//g'|dos2unix|awk '{print $4}'|awk -F '@'  '{print $2}')
+ result_error=$(echo "$output"|sed 's/[^[:print:]\t]//g'|dos2unix|tr "'"  " "|xargs -n 1|egrep -vw "${control_machines[0]}@$i|s|password\:|initialize.sh"|awk 'NR>12')
  result_array=("$result_ip" "$result_error")
 
  for k in "${result_array[@]}"; do
-    echo "$k"
+    echo -e "$COL_START${RED}$k$COL_END"
  done
 echo  -e "$COL_START${RED}=================================$COL_END"
 
@@ -437,7 +463,7 @@ done
 
 function configure_Key(){
 
-sudo cp -ra /home/${klustron_info[0]}/.ssh /tmp/ && \
+sudo cp -ra $kunlun_home/.ssh /tmp/ && \
 sudo chown -R ${control_machines[0]}:${control_machines[0]} /tmp/.ssh
 
 for i in "${machines_ip_list[@]}"
@@ -462,7 +488,7 @@ EOF
     # 复制 .ssh 文件夹到对应的文件夹
     expect <<EOF &>/dev/null
         set timeout 3
-        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo cp -ra /tmp/.ssh /home/${klustron_info[0]}"
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo cp -ra /tmp/.ssh $kunlun_home"
         expect {
             "yes/no" { send "yes\n"; exp_continue }
             "password" {
@@ -480,7 +506,7 @@ EOF
     # 更改 .ssh 文件夹的权限
     expect <<EOF &>/dev/null
         set timeout 3
-        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo chown -R ${klustron_info[0]}:${klustron_info[0]} /home/${klustron_info[0]}/.ssh"
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo chown -R ${klustron_info[0]}:${klustron_info[0]} $kunlun_home/.ssh"
         expect {
             "yes/no" { send "yes\n"; exp_continue }
             "password" {
@@ -791,6 +817,60 @@ done
 
 
 
+function install_cluster(){
+
+sudo -E su - ${klustron_info[0]} -c  "
+
+cd \$HOME/softwares/cloudnative/cluster/
+
+echo -e \"$COL_START${YELLOW}正在安装Klustron分布式数据库集群需要一点时间,请耐心等待,请勿中断.......$COL_END\"  
+
+if [[ -s clustermgr/clean.sh  && -s clustermgr/install.sh ]];then 
+  if bash clustermgr/clean.sh &>/dev/null && bash clustermgr/install.sh ;then  
+  #if true;then
+    echo -e \"$COL_START${YELLOW}=======================================$COL_START${GREEN}Successful${COL_END}$COL_START${YELLOW}====================================$COL_END\" 
+	echo \"███████╗██╗   ██╗ ██████╗ ██████╗███████╗███████╗███████╗\"
+    echo \"██╔════╝██║   ██║██╔════╝██╔════╝██╔════╝██╔════╝██╔════╝\"
+    echo \"███████╗██║   ██║██║     ██║     █████╗  ███████╗███████╗\"
+    echo \"╚════██║██║   ██║██║     ██║     ██╔══╝  ╚════██║╚════██║\"
+    echo \"███████║╚██████╔╝╚██████╗╚██████╗███████╗███████║███████║\"
+    echo \"╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝╚══════╝╚══════╝╚══════╝\"
+    echo -e \"$COL_START${RED}                               https://www.kunlunbase.com$COL_END\"
+    echo -e \"$COL_START${GREEN} 
+恭喜您已经成功安装好了Klustron分布式数据库集群
+我们提供了XPanel GUI工具软件，让DBA通过点击鼠标就可以轻松完成所有的数据库运维管理工作
+XPANEL 访问地址：$COL_END\"
+
+for i in ${klustron_xpanel[*]}
+do
+ echo -e  \"$COL_START${GREEN}http://\$i/KunlunXPanel/$COL_END\"
+done
+
+echo -e \"$COL_START${GREEN}
+初始化账户：super_dba
+初始化密码：super_dba
+XPANEL详细使用手册请阅读官方文档http://doc.klustron.com/zh/XPanel_Manual.html
+    $COL_END\" 
+    echo -e \"$COL_START${YELLOW}=====================================================================================$COL_END\" 
+  else
+    echo -e \"$COL_START${RED}安装失败,请联系泽拓科技售后人员$COL_END\"  
+    exit
+  fi
+  
+
+else
+  echo -e \"$COL_START${RED}安装失败,集群安装脚本不存在$COL_END\"  
+  exit
+fi
+
+"
+}
+
+
+
+
+
+
 
 
 
@@ -809,7 +889,7 @@ function klustron_ip() {
 
     while true; do
 
-        read -p "请输入服务器IP以空格分隔 (输入 'q' 或 'Q' 退出): " ip_list
+        read -e -p "请输入服务器IP以空格分隔 (输入 'q' 或 'Q' 退出): " ip_list
         if [[ $ip_list =~ [qQ] ]]; then
             exit
         fi
@@ -820,7 +900,7 @@ function klustron_ip() {
             continue
         fi
 
-        IFS=' ' read -ra new_ips <<< "$ip_list"
+        IFS=' ' read -e -ra new_ips <<< "$ip_list"
         if [ "${#new_ips[@]}" -lt 3 ]; then
             echo -e "${COL_START}${RED}输入的IP不能少于三个，请重新输入。${COL_END}"  >&2
             #echo "输入的IP不能少于三个，请重新输入。" >&2
@@ -1183,6 +1263,8 @@ fi
 
 function klustron_config(){
 
+
+
 # 生成 machines 节点
 machines=""
 for ip in "${machines_ip_list[@]}"; do
@@ -1274,12 +1356,17 @@ random_xpanel_ip=${machines_ip_list[$RANDOM % ${#machines_ip_list[@]}]}
 
 # 生成 xpanel 节点
 xpanel=$(cat <<EOF
-        "xpanel": {
-            "upgrade_all": false, 
-            "ip": "$random_xpanel_ip",
-            "port": 18080,
-            "imageType": "file"
-        }
+"xpanel": {
+    "upgrade_all": false,
+    "imageType": "file",
+    "nodes": [
+                {
+                "ip": "$random_xpanel_ip",
+                "port": 18080
+                }
+        ]
+
+    }
 EOF
 )
 
@@ -1287,10 +1374,10 @@ EOF
 
 
 
-if sudo test ! -s /home/${klustron_info[0]}/softwares/cloudnative/cluster/klustron_config.json ;then
+if sudo test ! -s $kunlun_home/softwares/cloudnative/cluster/klustron_config.json ;then
 # 生成完整的 JSON 配置文件
-#sudo bash -c "cat <<EOF > /home/${klustron_info[0]}/softwares/cloudnative/cluster/klustron_config.json
-sudo bash -c "cat <<EOF > /home/${klustron_info[0]}/softwares/cloudnative/cluster/klustron_config.json
+
+sudo bash -c "cat <<EOF > $kunlun_home/softwares/cloudnative/cluster/klustron_config.json
 {
     \"machines\": [
     $machines
@@ -1326,19 +1413,98 @@ sudo bash -c "cat <<EOF > /home/${klustron_info[0]}/softwares/cloudnative/cluste
 }
 EOF"  && \
 
-sudo chown ${klustron_info[0]}:${klustron_info[0]} /home/${klustron_info[0]}/softwares/cloudnative/cluster/klustron_config.json
+sudo chown ${klustron_info[0]}:${klustron_info[0]} $kunlun_home/softwares/cloudnative/cluster/klustron_config.json
 
+
+else
+
+sudo cp $kunlun_home/softwares/cloudnative/cluster/klustron_config.json{,.tmp} && \
+sudo chown ${klustron_info[0]}:${klustron_info[0]} $kunlun_home/softwares/cloudnative/cluster/klustron_config.json.tmp
 
 fi
+
+klustron_xpanel=($(sudo jq -r '.xpanel.nodes[] | "\(.ip):\(.port)"'  $kunlun_home/softwares/cloudnative/cluster/klustron_config.json))
+
 
 }
 
 
 
 
+function environment_check(){
+
+
+    # 控制机器环境函数
+	control_env
+
+    # 检查输入的主机用户名密码和ssh端口是否正确
+    check_machines_sshport_passwd
+
+    # 检查输入的主机架构是否一致
+    check_arch
+    
+    # 检查输入的主机系统是否一致
+    check_os
+    
+	# 检查输入的主机时区是否一致
+	check_zone
+	 
+    # 检查是否有昆仑数据库运行进程
+    check_klustron_running
+    
+	
+    # 控制机创建昆仑用户函数
+    control_kunlun
+	
+	# 函数获取昆仑用户家目非/home/user
+	home_user_env
+	
+	# 下载昆仑数据库程序
+    kunlun_softwares
+    
+	#生成配置文件
+    klustron_config
+	
+    # 创建昆仑用户秘钥
+    kunlun_secret_key
+
+
+}
 
 
 
+function  environment_init(){
+
+    # 分发脚本
+    host_initialize
+    # 初始化环境
+    execute_initialize
+    
+    # 配置kunlun用户免密
+    configure_Key
+    
+
+} 
+
+
+
+function  download_software(){
+
+    # 下载kunlun相关组件和程序安装包
+    kunlun_thirdparty
+    kunlun_package
+
+
+}
+
+
+function  install_database(){
+
+    #生成安装脚本和安装集群环境
+    install_script
+    install_cluster
+
+}
 
 
 
@@ -1355,40 +1521,14 @@ base_env
 
 
 # 客户交互式输入开始
-    #default_username=$(whoami)
-    username=$(whoami)
+    username=$(whoami)  #运行脚本的用户
+    kunlun_username='kunlun' # 默认昆仑用户
     default_sshport=22
     default_basedir='/home/kunlun/klustron'
     default_version=('1.3.1' '1.2.3')
 
-<<!
-    # 用户名
-while true; do
-    read -p "请输入用户名 [默认为 $default_username，选择默认值请按回车]: " username
-    
-    # 如果输入为空，则使用默认用户名
-    if [ -z "$username" ]; then
-        username=$default_username
-        break
-    fi
-    
-    # 检查输入是否包含空格
-    if [[ "$username" == *" "* ]]; then
-        echo "错误：单用户名之间不能包含空格。"
-        continue
-    fi
-    
-    break
-done
-
-!
 
 
-
-    # 密码
-    #echo -en "${COL_START}${YELLOW}${COL_END}"
-    read -t 300 -s -r -p "请输入$username用户密码: " password
-    echo
 
 
     # 主机IP
@@ -1401,14 +1541,20 @@ done
     else
       IFS=' ' read -ra machines_ip_list <<< "$machines_ip_str"
     fi
-    
+
+    # 密码
+    #echo -en "${COL_START}${YELLOW}${COL_END}"
+    read -t 300 -e -s -r -p "请输入$username用户密码: " password
+    echo
+
+
 
     
     
     # 端口
 while true; do
     #echo -en "${COL_START}${YELLOW}请输入SSH端口 [默认为 $default_sshport，选择默认值请按回车]:${COL_END}"
-    read -p "请输入SSH端口 [默认为 $default_sshport，选择默认值请按回车]: " sshport
+    read -e -p "请输入SSH端口 [默认为 $default_sshport，选择默认值请按回车]: " sshport
     
     # 如果输入为空，则使用默认端口
     if [ -z "$sshport" ]; then
@@ -1434,11 +1580,41 @@ while true; do
 done    
 
 
+
+
+<<!
+    # 用户名
+while true; do
+    read -e -p "请设置昆仑用户名 [默认为 $kunlun_username，选择默认值请按回车]: " kunlun_username
+    
+    # 如果输入为空，则使用默认用户名
+    if [ -z "$kunlun_username" ]; then
+        kunlun_username='kunlun'
+        break
+    fi
+    
+    # 检查输入是否包含空格
+    if [[ "$kunlun_username" == *" "* ]]; then
+        echo "错误：单用户名之间不能包含空格。"
+        continue
+    fi
+    
+    break
+done
+
+!
+
+
+
+
+
+
+
     # 安装目录
 while true; do    
     #echo -en "${COL_START}${YELLOW}请输入安装目录,请使用绝对路径 [默认为 $default_basedir 选择默认值回车即可]: ${COL_END}"
     #read -p " " basedir
-    read -p "请输入安装目录,请使用绝对路径 [默认为 $default_basedir 选择默认值回车即可]: " basedir
+    read -e -p "请输入安装目录,请使用绝对路径 [默认为 $default_basedir 选择默认值回车即可]: " basedir
     #只保留最前面一个斜杆和去掉最后面所有斜杆
     basedir=$(echo "$basedir" | sed 's:^/\{2,\}:/:; s:/\+$::')
     # 如果输入为空，则使用默认路径
@@ -1477,8 +1653,8 @@ while true; do
     
     echo "请选择安装版本 [默认为 ${default_version[0]} 选择默认值回车即可]: 
 [1]. ${default_version[0]}最新稳定版本
-[2]. ${default_version[1]}之前老版本"
-    read -p "请输入安装版本序号: " oper_id
+[2]. ${default_version[1]}历史版本"
+    read -e -p "请输入安装版本序号: " oper_id
     
     
     if [[ -z "$oper_id" ]]; then
@@ -1505,7 +1681,7 @@ while true; do
     
     # 将值放入数组
     control_machines=("$username" "$password" "$sshport")
-    klustron_info=("kunlun" "$basedir" "$klustron_VERSION")
+    klustron_info=("$kunlun_username" "$basedir" "$klustron_VERSION")
  
 <<! 
     echo "${machines_ip_list[0]}"
@@ -1520,49 +1696,14 @@ while true; do
 !
 # 用户交互结束 
 
-    # 控制机器环境函数
-	control_env
 
-    # 检查输入的主机用户名密码和ssh端口是否正确
-    check_machines_sshport_passwd
+environment_check
+environment_init
+download_software
+install_database    
 
-    # 检查输入的主机架构是否一致
-    check_arch
-    
-    # 检查输入的主机系统是否一致
-    check_os
-    
-	# 检查输入的主机时区是否一致
-	check_zone
-	 
-    # 检查是否有昆仑数据库运行进程
-    check_klustron_running
-    
-	
-    # 控制机创建昆仑用户函数
-    control_kunlun
-	
-	# 下载昆仑数据库程序
-    kunlun_softwares
-    
-	#生成配置文件
-    klustron_config
-	
-    # 创建昆仑用户秘钥
-    kunlun_secret_key
-    
-    # 分发脚本
-    host_initialize
-    # 初始化环境
-    execute_initialize
-    
-    # 配置kunlun用户免密
-    configure_Key
-    
-    # 下载kunlun相关组件和程序安装包
-    kunlun_thirdparty
-    kunlun_package
-    install_script
+
+
 }
 
 
@@ -1570,4 +1711,5 @@ while true; do
 
 
  __main
+
 

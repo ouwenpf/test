@@ -1,26 +1,54 @@
 #!/bin/bash
 
 
-COL_START='\e['
-COL_END='\e[0m'
-RED='31m'
-GREEN='32m'
-YELLOW='33m'
+function configure_global(){
+
 rnu=$((RANDOM % 21))
 klustron_info=("$@")
 
-if ! curl -s --head www.kunlunbase.com | head -n 1 | grep "200 OK" > /dev/null; then
-    #echo  -e "$COL_START$RED当前主机网络异常$COL_END"
-    echo  -e "$COL_START${RED}Network-Erro$COL_END"
-    exit
-    
-elif [ $# -ne 3 ];then
-  #echo  -e "$COL_START${RED}Usage:缺少昆仑用户,目录和版本信息$COL_END"
-  echo  -e "$COL_START${RED}Usage:MS-kunlun-info$COL_END"
-  exit 
-fi
-    
+if command -v curl &> /dev/null; then
+	if ! curl -s --head www.kunlunbase.com | head -n 1 | grep "200 OK" > /dev/null; then
+		echo   "Network-Erro"
+		exit 
+	fi
 
+elif command -v ping &> /dev/null; then
+	if ! ping -c 3 www.kunlunbase.com > /dev/null 2>&1; then
+		echo   "Network-Erro"
+		exit 
+ 
+	fi
+	
+elif [ $# -ne 3 ];then
+  echo   "Param-Error"
+  exit 
+
+else
+    echo  "Conn-Status"
+	#echo  "使用命令安装:sudo yum -y install iputils curl"
+	#echo  "使用命令安装:sudo apt update  && sudo apt install iputils-ping curl"
+    exit 
+fi
+
+    
+}
+
+
+
+
+function fetch_os_series() {
+
+if command -v apt &> /dev/null; then
+    echo 'Debian'
+elif command -v yum &> /dev/null; then
+    echo 'Red-Hat'
+elif command -v zypper &> /dev/null; then
+    echo 'SUSE' 
+else
+    echo "Unknown system"
+fi
+
+}
 
 
 
@@ -184,7 +212,7 @@ if [[ "$operating_system" == "centos" || "$operating_system" == "bclinux" || "$o
 
 elif [[ "$operating_system" == "ubuntu" ]]; then
   if ! id ${klustron_info[0]} &>/dev/null; then 
-    sudo useradd  -m -s /bin/bash  ${klustron_info[0]}  &>/dev/null   &&\
+    sudo useradd -r -m -s /bin/bash  $klustron_user  &>/dev/null   &&\
     if [[ $? == 0 ]]; then
         if ! sudo egrep -q "^${klustron_info[0]}.*NOPASSWD: ALL$" /etc/sudoers; then
             sudo sed -i "/^root/a$privileges_line" /etc/sudoers 
