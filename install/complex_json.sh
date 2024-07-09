@@ -383,7 +383,7 @@ do
     # 执行initialize.sh脚本
    output=$(expect <<EOF #&>/dev/null
         set timeout 3
-        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "sudo timedatectl | grep 'Time zone' |awk -F ':' '{print $2}'|awk '{print $1}'"
+        spawn  ssh  -p${control_machines[2]} ${control_machines[0]}@$i "timedatectl | grep 'Time zone' |awk -F ':' '{print $2}'|awk '{print $1}'"
         expect {
             "yes/no" { send "yes\n"; exp_continue }
             "password" {
@@ -853,7 +853,7 @@ ${RES}"
     # 将值放入数组
     control_machines=("$username" "$password" "$sshport")
     klustron_info=("$kunlun_username" "$basedir" "$klustron_VERSION")
-	kunlun_password="$(openssl rand -base64 12|openssl base64)"
+	readonly kunlun_password="$(cat /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&*()' | fold -w 16 | head -n 1|openssl base64)"
 	
 
  

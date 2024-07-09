@@ -164,7 +164,7 @@ if [[ -s ${klustron_info[1]}/klustron_config.json  ]];then
 	
 	
 	if  command -v python &> /dev/null; then
-			python setup_cluster_manager.py  --config=upgrade_klustron_config.json    --product_version=${klustron_info[2]} --action=upgrade   &> /dev/null
+			python setup_cluster_manager.py  --config=upgrade_klustron_config.json    --product_version=${klustron_info[2]} --action=upgrade --upgrade_version=${klustron_info[2]}   &> /dev/null
 			if [[ \$? -ne 0 ]];then
 					echo -e \"$COL_START${RED}执行python setup_cluster_manager.py  --config=upgrade_klustron_config.json  --product_version=${klustron_info[2]} --action=upgrade有误$COL_END\"
 					exit $upgrade_id

@@ -532,7 +532,7 @@ sudo -E su - ${klustron_info[0]} -c "
 echo -e \"${YELLOW_COLOR}正在下载昆仑安装程序......$RES\"
 
 if [[ ! -d  \$HOME/softwares/cloudnative ]]; then
-    git clone https://gitee.com/zettadb/cloudnative.git \$HOME/softwares/cloudnative &>/dev/null
+    git clone -b v1.3.1 https://gitee.com/zettadb/cloudnative.git \$HOME/softwares/cloudnative &>/dev/null
     if [[ \$? -eq 0 ]]; then 
         echo -e \"${GREEN_COLOR}昆仑安装程序下载成功$RES\"
     else 

@@ -246,7 +246,7 @@ function interact_info() {
     default_klustron_VERSION="1.3.1"
 
 # 分发机上创建用户用于安装昆仑数据库
-	klustron_info=("$default_kunlun_user" "$(echo 'JyEiIyQlJlwnKCkqKywtLi86Ozw9Pj9AW1xcXV5fYHt8fX4gJwo='|openssl   base64 -d)" "$default_klustron_VERSION")
+	control_machines=("$default_kunlun_user" "$(echo 'JyEiIyQlJlwnKCkqKywtLi86Ozw9Pj9AW1xcXV5fYHt8fX4gJwo='|openssl   base64 -d)" "$default_klustron_VERSION")
 
     # 检查运行当前脚本的用户
     if [ -z "${default_current_user}" ]; then
