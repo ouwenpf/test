@@ -8,7 +8,7 @@ YELLOW='33m'
 
 klustron_user=$(ls -l $0 | awk '{print $3}')
 basedir="$HOME/softwares/cloudnative/cluster"
-klustron_VERSION='1.3.1'
+klustron_VERSION='1.3.2'
 klustron_xpanel=($(sudo jq -r '.xpanel.nodes[] | "\(.ip):\(.port)"'  $basedir/klustron_config.json))
 klustron_info=("$klustron_user" "$basedir" "$klustron_VERSION")
 
@@ -153,25 +153,25 @@ if [[ -d ${klustron_info[1]} ]];then
 
 	if nc -z 192.168.0.104 14000; then
 		urls=(
-		\"\$lan_net/dailybuilds_x86_64/docker-images/${date_time}kunlun-xpanel-${klustron_info[2]}.tar.gz\"
-		\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-cdc-${klustron_info[2]}.tgz\"
-		\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-proxysql-${klustron_info[2]}.tgz\"
-		\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-cluster-manager-${klustron_info[2]}.tgz\"
-		\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-node-manager-${klustron_info[2]}.tgz\"
-		\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-server-${klustron_info[2]}.tgz\"
-		\"\$lan_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-storage-${klustron_info[2]}.tgz\"
+		\"\$lan_net/dailybuilds_x86_64/docker-images/\${date_time}kunlun-xpanel-${klustron_info[2]}.tar.gz\"
+		\"\$lan_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-cdc-${klustron_info[2]}.tgz\"
+		\"\$lan_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-proxysql-${klustron_info[2]}.tgz\"
+		\"\$lan_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-cluster-manager-${klustron_info[2]}.tgz\"
+		\"\$lan_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-node-manager-${klustron_info[2]}.tgz\"
+		\"\$lan_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-server-${klustron_info[2]}.tgz\"
+		\"\$lan_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-storage-${klustron_info[2]}.tgz\"
 		)
 
 	else
 
 		urls=(
-		\"\$wal_net/dailybuilds_x86_64/docker-images/${date_time}kunlun-xpanel-${klustron_info[2]}.tar.gz\"
-		\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-cdc-${klustron_info[2]}.tgz\"
-		\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-proxysql-${klustron_info[2]}.tgz\"
-		\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-cluster-manager-${klustron_info[2]}.tgz\"
-		\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-node-manager-${klustron_info[2]}.tgz\"
-		\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-server-${klustron_info[2]}.tgz\"
-		\"\$wal_net/dailybuilds_x86_64/enterprise/${date_time}kunlun-storage-${klustron_info[2]}.tgz\"
+		\"\$wal_net/dailybuilds_x86_64/docker-images/\${date_time}kunlun-xpanel-${klustron_info[2]}.tar.gz\"
+		\"\$wal_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-cdc-${klustron_info[2]}.tgz\"
+		\"\$wal_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-proxysql-${klustron_info[2]}.tgz\"
+		\"\$wal_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-cluster-manager-${klustron_info[2]}.tgz\"
+		\"\$wal_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-node-manager-${klustron_info[2]}.tgz\"
+		\"\$wal_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-server-${klustron_info[2]}.tgz\"
+		\"\$wal_net/dailybuilds_x86_64/enterprise/\${date_time}kunlun-storage-${klustron_info[2]}.tgz\"
 		)
 
 
@@ -271,17 +271,34 @@ if [[ -d ${klustron_info[1]} ]];then
 	for i in install clean start stop
 	do
 	
-	if  command -v python &> /dev/null; then
-			python setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i  &> /dev/null
-			if [[ \$? -ne 0 ]];then
-					echo -e \"$COL_START${RED}执行python setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i有误$COL_END\"
-	
-			fi
-	
-	else
-			echo -e \"$COL_START${RED}python命令不存在,请安装python$COL_END\"
-			exit
-	fi
+		if  command -v python &> /dev/null; then
+				python setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i  &> /dev/null
+				if [[ \$? -ne 0 ]];then
+						echo -e \"$COL_START$RED执行python setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i有误$COL_END\"
+		
+				fi
+		elif  command -v python2 &> /dev/null; then
+				python2 setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i  &> /dev/null
+				if [[ \$? -ne 0 ]];then
+						echo -e \"$COL_START$RED执行python2 setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i有误$COL_END\"
+		
+				fi
+		
+		elif  command -v python3 &> /dev/null; then
+				python3 setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i  &> /dev/null
+				if [[ \$? -ne 0 ]];then
+						echo -e \"$COL_START$RED执行python3 setup_cluster_manager.py --autostart --config=klustron_config.json   --product_version=${klustron_info[2]} --action=\$i有误$COL_END\"
+		
+				fi
+		
+		else
+			echo  -e \"${GREEN_COLOR}========================================================$RES\"
+			echo  -e \"$RED_COLOR_UF错误:$RES\"
+			echo  -e \"${YELLOW_COLOR}python命令不存在,请安装python$RES\"
+			echo  -e \"${GREEN_COLOR}========================================================$RES\"
+			exit 1
+		fi
+
 
 
 

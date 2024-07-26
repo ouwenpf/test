@@ -78,7 +78,7 @@ SELECT
     n.hostaddr,
     n.port,
     CASE
-        WHEN n.id = s.master_node_id THEN '主'
+        WHEN n.id = s.master_node_id THEN concat('主','_',s.id)
         ELSE '备机'
     END AS master_node_id
 FROM 
@@ -139,7 +139,7 @@ connections_info
     #echo ${server_connections[@]}
 	for i in ${server_connections[*]} 
 	do
-	host_port=$(echo "$i"| awk -F'[@\/]' '{print $4 }')
+	host_port=$(echo "$i"| awk -F'[@/]' '{print $4 }')
     psql $i << EOF
 	SELECT name 参数名称, setting "$host_port" FROM pg_settings WHERE $input_parameter;
 EOF
@@ -181,7 +181,7 @@ connections_info
 	
 	for i in ${server_connections[*]} 
 	do
-		host_port=$(echo "$i"| awk -F'[@\/]' '{print $4 }')
+		host_port=$(echo "$i"| awk -F'[@/]' '{print $4 }')
 		echo $host_port
 		psql $i << EOF
 		$output_parameter
@@ -196,8 +196,8 @@ EOF
             [Yy]* ) 
                 for i in ${server_connections[*]} 
 				do	
-					nodes_ip=$(echo "$i"| awk -F'[@\/]' '{print $4 }'  |awk -F ':' '{print $1}')
-					nodes_port=$(echo "$i"| awk -F'[@\/]' '{print $4 }'|awk -F ':' '{print $2}')
+					nodes_ip=$(echo "$i"| awk -F'[@/]' '{print $4 }'  |awk -F ':' '{print $1}')
+					nodes_port=$(echo "$i"| awk -F'[@/]' '{print $4 }'|awk -F ':' '{print $2}')
 					echo "计算节点$nodes_ip:$nodes_port重启中..."
 
 					job_id=$(
@@ -367,7 +367,7 @@ connections_info
 	
 	for i in ${server_connections[*]} 
 	do
-		host_port=$(echo "$i"| awk -F'[@\/]' '{print $4 }')
+		host_port=$(echo "$i"| awk -F'[@/]' '{print $4 }')
 		echo $host_port
 		psql $i << EOF
 		$output_parameter
@@ -382,8 +382,8 @@ EOF
             [Yy]* ) 
                 for i in ${server_connections[*]} 
 				do	
-					nodes_ip=$(echo "$i"| awk -F'[@\/]' '{print $4 }'  |awk -F ':' '{print $1}')
-					nodes_port=$(echo "$i"| awk -F'[@\/]' '{print $4 }'|awk -F ':' '{print $2}')
+					nodes_ip=$(echo "$i"| awk -F'[@/]' '{print $4 }'  |awk -F ':' '{print $1}')
+					nodes_port=$(echo "$i"| awk -F'[@/]' '{print $4 }'|awk -F ':' '{print $2}')
 					echo "计算节点$nodes_ip:$nodes_port重启中..."
 
 					job_id=$(
